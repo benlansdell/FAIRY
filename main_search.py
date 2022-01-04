@@ -63,7 +63,9 @@ if __name__ == "__main__":
         # Implement your own to fit your own to fit your data.
         if not slide_id.startswith('TCGA'):
             # Implementation of your own leave-one out strategy to fit your data
-            pass
+            #pass
+            patient_id = slide_id.split("_")[0]
+            db.leave_one_patient(patient_id)
         else:
             # Leave-one-patient out in TCGA cohort
             patient_id = slide_id.split("-")[2]

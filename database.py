@@ -56,7 +56,8 @@ class HistoDatabase(object):
             for key, val in self.meta.items():
                 val_tmp = []
                 for idx in range(len(val)):
-                    if val[idx]['slide_name'].split("-")[2] != patient_id:
+                    #if val[idx]['slide_name'].split("-")[2] != patient_id:
+                    if val[idx]['slide_name'].split("_")[0] != patient_id:
                         val_tmp.append(val[idx])
                 meta_tmp[key] = val_tmp
             self.meta_clean = meta_tmp

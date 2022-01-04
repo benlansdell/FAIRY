@@ -255,7 +255,7 @@ if __name__ == "__main__":
         os.makedirs(save_path_indexmeta)
 
     # Set up cpu and device
-    device = torch.device("cuda:0,1") if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device('cpu')
     num_workers = mp.cpu_count()
     pool = mp.Pool(num_workers)
 
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     vqvae_weight_value = torch.load(args.checkpoint)['model']
     vqvae_weight_enc = OrderedDict({k: v for k, v in vqvae_weight_value.items()
                                     if 'encoder' in k or 'codebook' in k})
-    vqvae.load_state_dict(vqvae_weight_enc)
+    vqvae.load_state_dict(vqvae_weight_enc, strict = False)
     vqvae = vqvae.to(device)
     vqvae.eval()
 
