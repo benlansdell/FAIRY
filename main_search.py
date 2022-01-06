@@ -84,6 +84,9 @@ if __name__ == "__main__":
         tmp_res = []
         for idx, patch_latent in enumerate(feat):
             res = db.query(patch_latent, densefeat[idx])
+            for res_i in res:
+                res_i['query_coords'] = coords[idx]
+                res_i['query_slide'] = slide_id
             tmp_res.append(res)
         t_elapse = time.time() - t_start
         with open(os.path.join(speed_record_path, "speed_log.txt"), 'a') as fw:

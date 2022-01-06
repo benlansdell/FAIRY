@@ -8,7 +8,7 @@ import os
 import math
 import glob
 from collections import Counter, defaultdict
-
+import pandas as pd
 
 def Uncertainty_Cal(bag, is_organ=False):
     """
@@ -120,9 +120,11 @@ def Filtered_BY_Prediction(bag_summary, label_count_summary):
     return bag_removed
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Evaluate the result of slide level search")
     parser.add_argument("--result_path", required=True, help="The path to the query result")
+    parser.add_argument("--csv_path", required = True, help = "location to write summary csv to")
     parser.add_argument("--site", required=True, help="The anatomic site where the database is built upon")
     args = parser.parse_args()
 
@@ -145,19 +147,29 @@ if __name__ == "__main__":
     # Using the inverse count as a weight for each diagnosis
     sum_inv = 0
     for v in total_slide.values():
-        sum_inv += (1./v)
+        if v:
+            sum_inv += (1./v)
 
     # Set a parameter k  to make the weight sum to k (k = 10, here)
     if args.site == 'organ':
         norm_fact = 30 / sum_inv
     else:
         norm_fact = 10 / sum_inv
-    weight = {k: norm_fact * 1./v for k, v in total_slide.items()}
+    
+    weight = {}
+    for k,v in total_slide.items():
+        if v:
+            weight[k] = norm_fact * 1./v
+    
+    #weight = {k: norm_fact * 1./v for k, v in total_slide.items()}
 
     metric_dict = {k: {'Acc': 0, 'Percision': 0, 'total_slide': 0}
                    for k in weight.keys()}
     bag_for_ret = {k: {} for k in weight.keys()}
     t_start = time.time()
+
+    summary_df = pd.DataFrame()
+    
 
     # Evaluating the result diagnosis by diagnosis
     for evlb in weight.keys():
@@ -195,6 +207,10 @@ if __name__ == "__main__":
                         len_info.append(len(bag))
 
                 bag_summary_dirty = copy.deepcopy(bag_summary)
+                ##The bag_summary here is sorted by certainty
+                #This means that we pick slides below based only on the query mosiac
+                #that has highest certainty. Perhaps basing it on one mosiac isn't a good idea?
+                #What if only that single mosiac has very high similarity, and the rest is totally different?
                 bag_summary, hamming_thrsh = Clean(len_info, bag_summary)
                 bag_removed = Filtered_BY_Prediction(bag_summary, label_count_summary)
 
@@ -233,9 +249,17 @@ if __name__ == "__main__":
                 ret_final_tmp = [(e[1], e[2], e[3], e[-1]) for e in
                                  sorted(ret_final, key=lambda x: (x[3], x[1]))
                                  if e[-1] not in bag_removed]
+
+                ret_final_ = [e[0] for e in
+                             sorted(ret_final, key=lambda x: (x[3], x[1]))
+                             if e[-1] not in bag_removed][0:topK_mMV]
+
                 ret_final = [e[2] for e in
                              sorted(ret_final, key=lambda x: (x[3], x[1]))
                              if e[-1] not in bag_removed][0:topK_mMV]
+
+                print("test slide", test_slide)
+                print(ret_final_)
 
                 # MAP calculation
                 ap_at_k = 0
