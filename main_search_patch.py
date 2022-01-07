@@ -6,15 +6,17 @@ import pickle
 import pandas as pd
 from database import HistoDatabase
 from tqdm import tqdm
+import numpy as np
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Search for patch query in the database")
     parser.add_argument("--patch_label_file", type=str, required=True)
     parser.add_argument("--patch_data_path", type=str, required=True)
-    parser.add_argument("--exp_name", type=str, choices=['kather100k'])
+    parser.add_argument("--exp_name", type=str, choices=['kather100k', 'comet_rms'])
     parser.add_argument("--db_index_path", type=str, required=True)
     parser.add_argument("--index_meta_path", type=str, required=True)
     parser.add_argument("--codebook_semantic", type=str, default="./checkpoints/codebook_semantic.pt")
+    parser.add_argument("--randomsubset", default = False, action = "store_true")
     args = parser.parse_args()
 
     # Create saving path
@@ -35,12 +37,21 @@ if __name__ == "__main__":
     t_acc = 0
     query_count = 0
     results = {}
-    for idx in tqdm(range(len(patch_label_file))):
+
+    N = len(patch_label_file)
+    N_sub = int(N*0.1)
+    if args.randomsubset:
+        indices = np.random.choice(N, N_sub, replace = False)
+    else:
+        indices = range(N)
+
+    for idx in tqdm(indices):
         t_start = time.time()
         patch_name = patch_label_file.loc[idx, 'Patch Names']
         patch_id = patch_name.split(".")[0]
         label = patch_label_file.loc[idx, 'label']
         print(patch_id)
+        #It does leave one out on the whole patch-level dataset?!
         db.leave_one_patient(patch_id)
 
         latentfeat_path = os.path.join("./DATA_PATCH/", "{}_latent"

@@ -164,7 +164,7 @@ def compute_densenet_features(patch_rescaled, patch_id, save_path, transform, de
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build daatbase for patch data')
-    parser.add_argument("--exp_name", type=str, choices=['kather100k'],
+    parser.add_argument("--exp_name", type=str, choices=['kather100k', 'comet_rms'],
                         help="Patch data name for the experiment")
     parser.add_argument("--patch_label_file", type=str, required=True,
                         help="The csv file that contain patch name and its label")
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     vqvae_weight_value = torch.load(args.checkpoint)['model']
     vqvae_weight_enc = OrderedDict({k: v for k, v in vqvae_weight_value.items()
                                     if 'encoder' in k or 'codebook' in k})
-    vqvae.load_state_dict(vqvae_weight_enc)
+    vqvae.load_state_dict(vqvae_weight_enc, strict = False)
     vqvae = vqvae.to(device)
     vqvae.eval()
 
@@ -229,13 +229,19 @@ if __name__ == "__main__":
         t_start = time.time()
         patch_name = patch_label_file.loc[idx, 'Patch Names']
         label = patch_label_file.loc[idx, 'label']
-        patch = openslide.open_slide(os.path.join(args.patch_data_path, patch_name))
+        #patch = openslide.open_slide(os.path.join(args.patch_data_path, patch_name))
         if args.exp_name == 'kather100k':
+            patch = openslide.open_slide(os.path.join(args.patch_data_path, patch_name))
             patch_rescaled = patch.read_region((0, 0), 0, (224, 224)).convert('RGB').resize((1024, 1024))
-        else:
+        elif args.exp_name == 'comet_rms':
             # Implementation of customized method that fit your data to
             # scale your data to 1024 x 1024
-            pass
+            #patch = openslide.open_slide(os.path.join(args.patch_data_path, patch_name))
+            #patch_rescaled = patch.read_region((0, 0), 0, (224, 224)).convert('RGB').resize((1024, 1024))
+            from PIL import Image
+            patch_rescaled = Image.open(os.path.join(args.patch_data_path, patch_name)).convert('RGB').resize((1024, 1024))
+        else:
+            raise NotImplementedError
         latent = compute_latent_features(patch_rescaled, patch_name.split(".")[0],
                                          save_path_latent,
                                          transform_vqvqe, vqvae)
