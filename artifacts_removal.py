@@ -50,8 +50,8 @@ if __name__ == "__main__":
             patch_size = 1024
         elif resolution == '40x':
             #Originally 2048
-            #patch_size = 2048
-            patch_size = 1024
+            patch_size = 2048
+            #patch_size = 1024
         print("Original mosaic size:", len(coords))
 
         # Remove the white artifacts

@@ -284,7 +284,7 @@ if __name__ == "__main__":
                 if hit_label == label_query:
                     if len(ret_final) == topK_mMV:
                         corr += 1
-                    elif len(ret_final) < topK_mMV and\
+                    elif len(ret_final) < topK_mMV and \
                             Counter(ret_final).most_common(1)[0][1] >= math.ceil(topK_mMV / 2):
                         corr += 1
                 count += 1
