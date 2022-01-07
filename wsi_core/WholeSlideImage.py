@@ -42,9 +42,19 @@ from utils.file_utils import load_pkl, save_pkl
 # 		img_patch.save(name)
 Image.MAX_IMAGE_PIXELS = 933120000
 
+from skimage.io import imread 
+from skimage.transform import resize
+
 class WholeSlideImage(object):
 	def __init__(self, path, xml_path=None, hdf5_file=None):
 		self.name = ".".join(path.split("/")[-1].split('.')[:-1])
+
+		self.manual_roi_path=path.replace(self.name+".svs","masks/export/"+self.name+".tif")
+		try:
+			self.manual_roi = (imread(self.manual_roi_path))
+		except:
+			self.manual_roi = None
+
 		self.wsi = openslide.open_slide(path)
 		self.level_downsamples = self._assertLevelDownsamples()
 		self.level_dim = self.wsi.level_dimensions
@@ -108,7 +118,8 @@ class WholeSlideImage(object):
 
 
 	def segmentTissue(self, seg_level=0, sthresh=20, sthresh_up = 255, mthresh=7, close = 0, use_otsu=False, 
-							filter_params={'a_t':100}, ref_patch_size=512, exclude_ids=[], keep_ids=[]):
+							filter_params={'a_t':100}, ref_patch_size=512, exclude_ids=[], keep_ids=[],
+							pathologist_annotation_only = False):
 		"""
 			Segment the tissue via HSV -> Median thresholding -> Binary threshold
 		"""
@@ -168,7 +179,22 @@ class WholeSlideImage(object):
 			return foreground_contours, hole_contours
 		
 		img = np.array(self.wsi.read_region((0,0), seg_level, self.level_dim[seg_level]))
-		img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
+
+		if pathologist_annotation_only:
+			manual_roi=self.manual_roi
+			manual_roi[manual_roi!=1]=0
+			manual_roi[manual_roi==1]=255
+			segManual=resize(manual_roi,(img.shape[0],img.shape[1]),anti_aliasing=False)
+			segManual=(segManual>0)*255
+			masked_img=np.copy(img)
+			if np.sum(segManual)>0:
+				masked_img[segManual<100]=255
+
+			img_hsv = cv2.cvtColor(masked_img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
+		else:
+			img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
+
+		#img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
 		img_med = cv2.medianBlur(img_hsv[:,:,1], mthresh)  # Apply median blurring
 		
 	   
