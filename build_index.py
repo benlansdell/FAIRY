@@ -18,6 +18,24 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import torch
+import torch.nn as nn
+
+weights_path = '/home/blansdell/projects/comet/yottixel/weights/KimiaNetPyTorchWeights.pth'
+
+class fully_connected(nn.Module):
+	"""docstring for BottleNeck"""
+	def __init__(self, model, num_ftrs, num_classes):
+		super(fully_connected, self).__init__()
+		self.model = model
+		self.fc_4 = nn.Linear(num_ftrs,num_classes)
+
+	def forward(self, x):
+		x = self.model(x)
+		x = torch.flatten(x, 1)
+		out_1 = x
+		out_3 = self.fc_4(x)
+		return  out_1, out_3
 
 def set_everything(seed):
     """
@@ -214,6 +232,7 @@ def compute_densenet_features(wsi, mosaic_path, save_path, resolution,
             mosaic = torch.squeeze(mosaic, 1)
             mosaic = mosaic.to(device, non_blocking=True)
             features = densenet(mosaic)
+            #print(features)
             features = features.cpu().numpy()
             features_list.append(features)
             count += features.shape[0]
@@ -240,6 +259,9 @@ if __name__ == "__main__":
                         help="Path to VQ-VAE checkpoint")
     parser.add_argument("--codebook_semantic", type=str, default="./checkpoints/codebook_semantic.pt", 
                         help="Path to semantic codebook")
+    parser.add_argument("--kimianet_weights", action="store_true", default=False, 
+                        help="Whether to load kimianet pretrained weights instead of imagenet weights")
+
     args = parser.parse_args()
 
     # Create the save path of database
@@ -274,8 +296,12 @@ if __name__ == "__main__":
     # Load the Densenet
     densenet = densenet121(pretrained=True)
     densenet = torch.nn.Sequential(*list(densenet.children())[:-1],
-                                   torch.nn.AvgPool2d(kernel_size=(32, 32)))
+                                torch.nn.AvgPool2d(kernel_size=(32, 32)))
     densenet.to(device)
+
+    if args.kimianet_weights:
+        densenet.load_state_dict(torch.load(weights_path), strict = False)
+
     densenet.eval()
 
     # Load the codebook and vq-vae encoder
